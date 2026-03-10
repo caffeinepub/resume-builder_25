@@ -1,0 +1,175 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: 'Cabinet Grotesk';
+  src: url('/assets/fonts/CabinetGrotesk-Variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'General Sans';
+  src: url('/assets/fonts/GeneralSans-Variable.woff2') format('woff2');
+  font-weight: 100 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Playfair Display';
+  src: url('/assets/fonts/PlayfairDisplay-Variable.woff2') format('woff2');
+  font-weight: 400 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Geist Mono';
+  src: url('/assets/fonts/GeistMono-Variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  src: url('/assets/fonts/PlusJakartaSans-Variable.woff2') format('woff2');
+  font-weight: 200 800;
+  font-display: swap;
+}
+
+@layer base {
+  :root {
+    --radius: 0.5rem;
+
+    /* Warm ivory background, deep charcoal text */
+    --background: 0.97 0.008 82;
+    --foreground: 0.16 0.025 258;
+
+    --card: 0.995 0.004 80;
+    --card-foreground: 0.16 0.025 258;
+
+    --popover: 0.995 0.004 80;
+    --popover-foreground: 0.16 0.025 258;
+
+    /* Forest green primary — distinctive for a resume builder */
+    --primary: 0.38 0.115 163;
+    --primary-foreground: 0.97 0.005 85;
+
+    --secondary: 0.92 0.018 163;
+    --secondary-foreground: 0.28 0.09 163;
+
+    --muted: 0.93 0.01 82;
+    --muted-foreground: 0.5 0.018 258;
+
+    /* Warm amber accent */
+    --accent: 0.92 0.03 72;
+    --accent-foreground: 0.42 0.12 72;
+
+    --destructive: 0.58 0.23 27;
+    --destructive-foreground: 0.97 0 0;
+
+    --border: 0.87 0.016 85;
+    --input: 0.87 0.016 85;
+    --ring: 0.38 0.115 163;
+
+    --chart-1: 0.38 0.115 163;
+    --chart-2: 0.72 0.14 68;
+    --chart-3: 0.58 0.23 27;
+    --chart-4: 0.55 0.15 230;
+    --chart-5: 0.65 0.18 310;
+
+    --sidebar: 0.95 0.01 82;
+    --sidebar-foreground: 0.16 0.025 258;
+    --sidebar-primary: 0.38 0.115 163;
+    --sidebar-primary-foreground: 0.97 0.005 85;
+    --sidebar-accent: 0.92 0.018 163;
+    --sidebar-accent-foreground: 0.28 0.09 163;
+    --sidebar-border: 0.87 0.016 85;
+    --sidebar-ring: 0.38 0.115 163;
+
+    /* Custom app tokens */
+    --amber: 0.72 0.165 68;
+    --amber-light: 0.92 0.05 72;
+    --green-soft: 0.92 0.025 163;
+  }
+
+  .dark {
+    --background: 0.13 0.015 258;
+    --foreground: 0.95 0.005 85;
+    --card: 0.18 0.018 258;
+    --card-foreground: 0.95 0.005 85;
+    --popover: 0.2 0.018 258;
+    --popover-foreground: 0.95 0.005 85;
+    --primary: 0.58 0.14 163;
+    --primary-foreground: 0.13 0.015 258;
+    --secondary: 0.22 0.03 163;
+    --secondary-foreground: 0.78 0.08 163;
+    --muted: 0.22 0.02 258;
+    --muted-foreground: 0.6 0.015 258;
+    --accent: 0.26 0.03 72;
+    --accent-foreground: 0.85 0.12 72;
+    --destructive: 0.65 0.23 27;
+    --destructive-foreground: 0.97 0 0;
+    --border: 1 0 0 / 10%;
+    --input: 1 0 0 / 12%;
+    --ring: 0.58 0.14 163;
+    --sidebar: 0.18 0.018 258;
+    --sidebar-foreground: 0.95 0.005 85;
+    --sidebar-primary: 0.58 0.14 163;
+    --sidebar-primary-foreground: 0.13 0.015 258;
+    --sidebar-accent: 0.22 0.03 163;
+    --sidebar-accent-foreground: 0.78 0.08 163;
+    --sidebar-border: 1 0 0 / 10%;
+    --sidebar-ring: 0.58 0.14 163;
+    --amber: 0.78 0.165 68;
+    --amber-light: 0.28 0.06 72;
+    --green-soft: 0.22 0.03 163;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+
+  h1, h2, h3, h4 {
+    @apply font-display;
+  }
+}
+
+/* Print styles — only show resume preview */
+@media print {
+  body > * {
+    display: none !important;
+  }
+  .print-target {
+    display: block !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    z-index: 9999 !important;
+    background: white !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    transform: none !important;
+  }
+  .print-target * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+
+/* Resume preview scaling container */
+.preview-scale-wrapper {
+  transform-origin: top left;
+}
+
+/* Subtle dot grid pattern for dashboard background */
+.dot-grid-bg {
+  background-image: radial-gradient(circle, oklch(0.75 0.015 85) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
