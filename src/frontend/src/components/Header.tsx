@@ -1,7 +1,9 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Crown, FileText, LogIn, LogOut, User } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Crown, FileText, LogIn, LogOut, Settings, User } from "lucide-react";
 import { navigate } from "../App";
+import { useActor } from "../hooks/useActor";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 
 interface HeaderProps {
@@ -11,11 +13,21 @@ interface HeaderProps {
 export default function Header({ isPremium }: HeaderProps) {
   const { identity, login, clear, isLoggingIn, isInitializing } =
     useInternetIdentity();
+  const { actor, isFetching } = useActor();
   const isLoggedIn = !!identity;
   const principal = identity?.getPrincipal().toString();
   const shortPrincipal = principal
     ? `${principal.slice(0, 5)}…${principal.slice(-3)}`
     : "";
+
+  const { data: isAdmin } = useQuery<boolean>({
+    queryKey: ["isAdmin"],
+    queryFn: async () => {
+      if (!actor) return false;
+      return actor.isCallerAdmin();
+    },
+    enabled: !!actor && !isFetching && isLoggedIn,
+  });
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/90 backdrop-blur-sm">
@@ -48,6 +60,18 @@ export default function Header({ isPremium }: HeaderProps) {
         <div className="flex items-center gap-2">
           {isLoggedIn ? (
             <>
+              {isAdmin && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => navigate("/settings")}
+                  className="text-muted-foreground hover:text-foreground w-8 h-8"
+                  aria-label="Settings"
+                  data-ocid="nav.link"
+                >
+                  <Settings className="w-4 h-4" />
+                </Button>
+              )}
               <div className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground border border-border rounded-full px-3 py-1">
                 <User className="w-3 h-3" />
                 {shortPrincipal}

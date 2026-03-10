@@ -1,29 +1,26 @@
 # Resume Builder
 
 ## Current State
-New project with no existing code.
+Fully functional resume builder with Stripe checkout integration. The backend has `setStripeConfiguration` (admin-only) and `createCheckoutSession` / `getStripeSessionStatus` endpoints. The frontend has an UpgradeDialog that launches Stripe checkout at $9.99 one-time. There is no UI for the admin to enter their Stripe secret key.
 
 ## Requested Changes (Diff)
 
 ### Add
-- Resume creation with multiple sections: personal info, work experience, education, skills, summary
-- Live preview of the resume as the user fills in the form
-- Multiple resume templates (Classic, Modern, Minimal)
-- Ability to save resumes to the backend (per user session)
-- Ability to load and edit previously saved resumes
-- Stripe payment to unlock PDF export / premium templates
-- Resume list dashboard to manage saved resumes
+- Admin Settings page accessible from the header when user is an admin
+- Settings form with fields: Stripe Secret Key (password input) and Allowed Countries (comma-separated, default "US")
+- Save button that calls `setStripeConfiguration`
+- Shows current Stripe configured status (calls `isStripeConfigured`)
+- Route `/settings` added to App.tsx
 
 ### Modify
-- N/A
+- Header: add a Settings link/icon that only appears when the logged-in user `isCallerAdmin` returns true
+- App.tsx: add `settings` view to AppView type and route parsing
 
 ### Remove
-- N/A
+- Nothing
 
 ## Implementation Plan
-1. Backend: store resumes (title, sections data, template choice) per user principal. CRUD operations: create, read, update, delete resume.
-2. Frontend: multi-step form editor with sections for personal info, summary, work experience, education, skills.
-3. Live preview panel alongside the form showing rendered resume.
-4. Template selector (Classic, Modern, Minimal).
-5. Dashboard page listing saved resumes with edit/delete actions.
-6. Stripe paywall for PDF export and premium templates.
+1. Add `settings` to `AppView` type in App.tsx and route parsing for `#/settings`
+2. Create `src/frontend/src/pages/Settings.tsx` with the admin settings form
+3. Update `Header.tsx` to check `isCallerAdmin` and show a Settings icon/link for admins
+4. Wire up `Settings` page in `App.tsx`

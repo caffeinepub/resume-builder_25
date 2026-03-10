@@ -5,11 +5,13 @@ import Header from "./components/Header";
 import { useActor } from "./hooks/useActor";
 import Dashboard from "./pages/Dashboard";
 import Editor from "./pages/Editor";
+import Settings from "./pages/Settings";
 
 export type AppView =
   | { page: "dashboard" }
   | { page: "editor"; id?: number }
-  | { page: "stripe-success"; sessionId: string };
+  | { page: "stripe-success"; sessionId: string }
+  | { page: "settings" };
 
 function parseRoute(): AppView {
   const hash = window.location.hash.slice(1) || "/";
@@ -25,6 +27,9 @@ function parseRoute(): AppView {
   if (path === "/stripe-success") {
     const sessionId = params.get("session_id") || "";
     return { page: "stripe-success", sessionId };
+  }
+  if (path === "/settings") {
+    return { page: "settings" };
   }
   return { page: "dashboard" };
 }
@@ -99,6 +104,7 @@ export default function App() {
             onBack={() => navigate("/")}
           />
         )}
+        {view.page === "settings" && <Settings onBack={() => navigate("/")} />}
       </main>
       <footer className="border-t border-border py-4 px-6 text-center text-xs text-muted-foreground">
         © {new Date().getFullYear()}. Built with ♥ using{" "}
