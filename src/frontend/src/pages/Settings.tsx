@@ -63,8 +63,8 @@ export default function Settings({ onBack }: SettingsProps) {
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (!actor) throw new Error("Not authenticated");
-      if (!secretKey.startsWith("sk_"))
-        throw new Error("Secret key must start with sk_");
+      if (!secretKey.startsWith("sk_") && !secretKey.startsWith("rk_"))
+        throw new Error("Secret key must start with sk_ or rk_");
       const countries = allowedCountries
         .split(",")
         .map((s) => s.trim())
@@ -212,7 +212,7 @@ export default function Settings({ onBack }: SettingsProps) {
                 <Input
                   id="stripe-secret-key"
                   type={showKey ? "text" : "password"}
-                  placeholder="sk_live_… or sk_test_…"
+                  placeholder="sk_live_…, sk_test_…, or rk_…"
                   value={secretKey}
                   onChange={(e) => setSecretKey(e.target.value)}
                   className="pr-10 font-mono text-sm"
