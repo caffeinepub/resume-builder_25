@@ -3,7 +3,7 @@ import Prim "mo:prim";
 import Runtime "mo:core/Runtime";
 
 mixin (accessControlState : AccessControl.AccessControlState) {
-  // Initialize auth (first caller becomes admin, others become users)
+  // Initialize auth (first caller becomes admin, others become users).
   public shared ({ caller }) func _initializeAccessControlWithSecret(userSecret : Text) : async () {
     switch (Prim.envVar<system>("CAFFEINE_ADMIN_TOKEN")) {
       case (null) {
@@ -11,6 +11,18 @@ mixin (accessControlState : AccessControl.AccessControlState) {
       };
       case (?adminToken) {
         AccessControl.initialize(accessControlState, caller, adminToken, userSecret);
+      };
+    };
+  };
+
+  // Force-claim admin role using the admin token (bypasses prior registration).
+  public shared ({ caller }) func reclaimAdmin(userSecret : Text) : async () {
+    switch (Prim.envVar<system>("CAFFEINE_ADMIN_TOKEN")) {
+      case (null) {
+        Runtime.trap("CAFFEINE_ADMIN_TOKEN environment variable is not set");
+      };
+      case (?adminToken) {
+        AccessControl.forceClaimAdmin(accessControlState, caller, adminToken, userSecret);
       };
     };
   };

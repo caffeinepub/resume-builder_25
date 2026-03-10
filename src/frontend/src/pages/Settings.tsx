@@ -18,11 +18,13 @@ import {
   Eye,
   EyeOff,
   Loader2,
+  Lock,
   XCircle,
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useActor } from "../hooks/useActor";
+import { useInternetIdentity } from "../hooks/useInternetIdentity";
 
 interface SettingsProps {
   onBack: () => void;
@@ -30,9 +32,20 @@ interface SettingsProps {
 
 export default function Settings({ onBack }: SettingsProps) {
   const { actor, isFetching } = useActor();
+  const { identity } = useInternetIdentity();
+  const isLoggedIn = !!identity;
   const [secretKey, setSecretKey] = useState("");
   const [allowedCountries, setAllowedCountries] = useState("US");
   const [showKey, setShowKey] = useState(false);
+
+  const { data: isAdmin, isLoading: isAdminLoading } = useQuery<boolean>({
+    queryKey: ["isCallerAdmin"],
+    queryFn: async () => {
+      if (!actor) return false;
+      return actor.isCallerAdmin();
+    },
+    enabled: !!actor && !isFetching && isLoggedIn,
+  });
 
   const {
     data: isConfigured,
@@ -44,7 +57,7 @@ export default function Settings({ onBack }: SettingsProps) {
       if (!actor) return false;
       return actor.isStripeConfigured();
     },
-    enabled: !!actor && !isFetching,
+    enabled: !!actor && !isFetching && isAdmin === true,
   });
 
   const saveMutation = useMutation({
@@ -70,6 +83,50 @@ export default function Settings({ onBack }: SettingsProps) {
       toast.error(err.message || "Failed to save configuration.");
     },
   });
+
+  // Loading state while checking admin
+  if (!isLoggedIn || (isAdminLoading && isFetching)) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2
+          className="w-6 h-6 animate-spin text-muted-foreground"
+          data-ocid="settings.loading_state"
+        />
+      </div>
+    );
+  }
+
+  // Access denied for non-admins
+  if (!isAdminLoading && isAdmin !== true) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+        <Card
+          className="max-w-sm w-full text-center border-border shadow-sm"
+          data-ocid="settings.card"
+        >
+          <CardContent className="pt-10 pb-8 px-8">
+            <div className="w-14 h-14 rounded-2xl bg-destructive/10 flex items-center justify-center mx-auto mb-5">
+              <Lock className="w-7 h-7 text-destructive" />
+            </div>
+            <h2 className="font-display text-xl font-bold mb-2">
+              Access Denied
+            </h2>
+            <p className="text-sm text-muted-foreground mb-6">
+              This page is only accessible to admins.
+            </p>
+            <Button
+              variant="outline"
+              onClick={onBack}
+              data-ocid="settings.cancel_button"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Go back
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">

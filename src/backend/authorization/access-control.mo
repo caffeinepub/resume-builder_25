@@ -37,6 +37,15 @@ module {
     };
   };
 
+  // Force-claim admin using the admin token. Promotes caller to admin regardless of prior state.
+  public func forceClaimAdmin(state : AccessControlState, caller : Principal, adminToken : Text, userProvidedToken : Text) {
+    if (caller.isAnonymous()) { return };
+    if (userProvidedToken == adminToken) {
+      state.userRoles.add(caller, #admin);
+      state.adminAssigned := true;
+    };
+  };
+
   public func getUserRole(state : AccessControlState, caller : Principal) : UserRole {
     if (caller.isAnonymous()) { return #guest };
     switch (state.userRoles.get(caller)) {

@@ -21,7 +21,7 @@ export default function Header({ isPremium }: HeaderProps) {
     : "";
 
   const { data: isAdmin } = useQuery<boolean>({
-    queryKey: ["isAdmin"],
+    queryKey: ["isCallerAdmin"],
     queryFn: async () => {
       if (!actor) return false;
       return actor.isCallerAdmin();
@@ -60,7 +60,7 @@ export default function Header({ isPremium }: HeaderProps) {
         <div className="flex items-center gap-2">
           {isLoggedIn ? (
             <>
-              {isAdmin && (
+              {isAdmin === true && (
                 <Button
                   variant="ghost"
                   size="icon"

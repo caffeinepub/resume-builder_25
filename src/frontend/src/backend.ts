@@ -179,6 +179,7 @@ export interface backendInterface {
     getStripeSessionStatus(sessionId: string): Promise<StripeSessionStatus>;
     isCallerAdmin(): Promise<boolean>;
     isStripeConfigured(): Promise<boolean>;
+    reclaimAdmin(token: string): Promise<void>;
     setStripeConfiguration(config: StripeConfiguration): Promise<void>;
     transform(input: TransformationInput): Promise<TransformationOutput>;
     updateResume(index: bigint, updatedResume: Resume): Promise<void>;
@@ -340,7 +341,21 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async setStripeConfiguration(arg0: StripeConfiguration): Promise<void> {
+    async reclaimAdmin(arg0: string): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.reclaimAdmin(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.reclaimAdmin(arg0);
+            return result;
+        }
+    }
+        async setStripeConfiguration(arg0: StripeConfiguration): Promise<void> {
         if (this.processError) {
             try {
                 const result = await this.actor.setStripeConfiguration(arg0);

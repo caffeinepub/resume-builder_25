@@ -28,6 +28,12 @@ export function useActor() {
       const actor = await createActorWithConfig(actorOptions);
       const adminToken = getSecretParameter("caffeineAdminToken") || "";
       await actor._initializeAccessControlWithSecret(adminToken);
+      // If admin token is present in the URL, force-claim admin role.
+      // This handles the case where the user was previously registered as a
+      // regular user before using the admin link.
+      if (adminToken) {
+        await actor.reclaimAdmin(adminToken);
+      }
       return actor;
     },
     // Only refetch when identity changes

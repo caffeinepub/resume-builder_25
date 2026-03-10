@@ -10,19 +10,27 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useQueryClient } from "@tanstack/react-query";
 import {
+  ArrowDownAZ,
+  ArrowUpAZ,
+  Copy,
   Crown,
   Edit3,
   FileText,
   LayoutTemplate,
   Loader2,
   Plus,
+  Search,
   Trash2,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { ResumeTemplate } from "../backend";
+import { useActor } from "../hooks/useActor";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import { useAllResumes, useDeleteResume } from "../hooks/useQueries";
 
@@ -43,12 +51,51 @@ const templateColors: Record<ResumeTemplate, string> = {
   [ResumeTemplate.minimal]: "bg-muted text-muted-foreground",
 };
 
+function ResumeCardSkeleton() {
+  return (
+    <div className="bg-card border border-border rounded-xl p-5">
+      <div className="flex items-start justify-between mb-4">
+        <Skeleton className="w-10 h-10 rounded-lg" />
+        <Skeleton className="w-16 h-5 rounded-full" />
+      </div>
+      <Skeleton className="w-3/4 h-5 mb-2" />
+      <Skeleton className="w-1/2 h-4 mb-1" />
+      <Skeleton className="w-2/3 h-4 mb-4" />
+      <Skeleton className="w-1/3 h-3 mb-4" />
+      <div className="flex gap-2">
+        <Skeleton className="flex-1 h-8 rounded-md" />
+        <Skeleton className="w-8 h-8 rounded-md" />
+        <Skeleton className="w-8 h-8 rounded-md" />
+      </div>
+    </div>
+  );
+}
+
 export default function Dashboard({ onEdit, onNew }: DashboardProps) {
   const { identity, login } = useInternetIdentity();
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
   const { data: resumes = [], isLoading } = useAllResumes();
   const { mutateAsync: deleteResume, isPending: isDeleting } =
     useDeleteResume();
   const [deleteTarget, setDeleteTarget] = useState<number | null>(null);
+  const [search, setSearch] = useState("");
+  const [sortAsc, setSortAsc] = useState(true);
+  const [duplicatingIdx, setDuplicatingIdx] = useState<number | null>(null);
+
+  // Keyboard shortcut: press 'n' to create new resume
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement).tagName.toLowerCase();
+      if (tag === "input" || tag === "textarea" || tag === "select") return;
+      if (e.key === "n" && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        e.preventDefault();
+        if (identity) onNew();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [identity, onNew]);
 
   const handleDelete = async () => {
     if (deleteTarget === null) return;
@@ -61,6 +108,36 @@ export default function Dashboard({ onEdit, onNew }: DashboardProps) {
       setDeleteTarget(null);
     }
   };
+
+  const handleDuplicate = async (idx: number) => {
+    if (!actor) return;
+    setDuplicatingIdx(idx);
+    try {
+      await actor.createResume(resumes[idx]);
+      queryClient.invalidateQueries({ queryKey: ["resumes"] });
+      toast.success("Resume duplicated.");
+    } catch {
+      toast.error("Failed to duplicate resume.");
+    } finally {
+      setDuplicatingIdx(null);
+    }
+  };
+
+  // Filter + sort
+  const filteredResumes = resumes
+    .map((r, originalIdx) => ({ resume: r, originalIdx }))
+    .filter(({ resume }) => {
+      if (!search.trim()) return true;
+      const q = search.toLowerCase();
+      return (
+        resume.title.toLowerCase().includes(q) ||
+        resume.personalInfo.name.toLowerCase().includes(q)
+      );
+    })
+    .sort((a, b) => {
+      const cmp = (a.resume.title || "").localeCompare(b.resume.title || "");
+      return sortAsc ? cmp : -cmp;
+    });
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10">
@@ -86,19 +163,22 @@ export default function Dashboard({ onEdit, onNew }: DashboardProps) {
           onClick={identity ? onNew : login}
           className="shrink-0 bg-primary hover:bg-primary/90 font-semibold"
           data-ocid="dashboard.primary_button"
+          title="New Resume (N)"
         >
           <Plus className="w-4 h-4 mr-2" />
           New Resume
         </Button>
       </motion.div>
 
-      {/* Loading */}
+      {/* Loading — skeleton cards */}
       {isLoading && (
         <div
-          className="flex items-center justify-center py-24"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"
           data-ocid="dashboard.loading_state"
         >
-          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+          <ResumeCardSkeleton />
+          <ResumeCardSkeleton />
+          <ResumeCardSkeleton />
         </div>
       )}
 
@@ -165,6 +245,42 @@ export default function Dashboard({ onEdit, onNew }: DashboardProps) {
         </motion.div>
       )}
 
+      {/* Search + Sort toolbar */}
+      {!isLoading && resumes.length >= 1 && (
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25 }}
+          className="flex items-center gap-2 mb-6"
+        >
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+            <Input
+              type="search"
+              placeholder="Search by title or name…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9 text-sm"
+              data-ocid="dashboard.search_input"
+            />
+          </div>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setSortAsc((v) => !v)}
+            aria-label={sortAsc ? "Sort Z→A" : "Sort A→Z"}
+            className="shrink-0"
+            data-ocid="dashboard.toggle"
+          >
+            {sortAsc ? (
+              <ArrowUpAZ className="w-4 h-4" />
+            ) : (
+              <ArrowDownAZ className="w-4 h-4" />
+            )}
+          </Button>
+        </motion.div>
+      )}
+
       {/* Resume Grid */}
       {!isLoading && resumes.length > 0 && (
         <motion.div
@@ -174,72 +290,109 @@ export default function Dashboard({ onEdit, onNew }: DashboardProps) {
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"
         >
           <AnimatePresence>
-            {resumes.map((resume, i) => (
+            {filteredResumes.length === 0 ? (
               <motion.div
-                key={resume.title + resume.personalInfo.name + String(i)}
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.25, delay: i * 0.05 }}
-                className="group bg-card border border-border rounded-xl p-5 shadow-card hover:shadow-elevated transition-shadow"
-                data-ocid={`dashboard.item.${i + 1}`}
+                key="no-results"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="col-span-full flex flex-col items-center justify-center py-16 text-center"
+                data-ocid="dashboard.empty_state"
               >
-                {/* Card Header */}
-                <div className="flex items-start justify-between mb-4">
-                  <div className="w-10 h-10 rounded-lg bg-green-soft flex items-center justify-center shrink-0">
-                    <LayoutTemplate className="w-5 h-5 text-primary" />
-                  </div>
-                  <Badge
-                    className={`text-xs font-semibold border-0 ${templateColors[resume.template]}`}
-                  >
-                    {templateLabels[resume.template]}
-                  </Badge>
-                </div>
-
-                {/* Title & Info */}
-                <h3 className="font-display font-bold text-base mb-1 truncate">
-                  {resume.title || "Untitled Resume"}
-                </h3>
-                <p className="text-xs text-muted-foreground truncate mb-1">
-                  {resume.personalInfo.name || "—"}
+                <Search className="w-8 h-8 text-muted-foreground mb-3" />
+                <p className="font-medium text-sm">
+                  No resumes match your search
                 </p>
-                {resume.personalInfo.email && (
-                  <p className="text-xs text-muted-foreground truncate">
-                    {resume.personalInfo.email}
-                  </p>
-                )}
-
-                <div className="mt-2 mb-4 text-xs text-muted-foreground">
-                  {resume.workExperience.length} job
-                  {resume.workExperience.length !== 1 ? "s" : ""} ·{" "}
-                  {resume.skills.length} skill
-                  {resume.skills.length !== 1 ? "s" : ""}
-                </div>
-
-                {/* Actions */}
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1 text-xs"
-                    onClick={() => onEdit(i)}
-                    data-ocid={`dashboard.edit_button.${i + 1}`}
-                  >
-                    <Edit3 className="w-3.5 h-3.5 mr-1.5" />
-                    Edit
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-xs text-destructive hover:text-destructive hover:bg-destructive/5 border-border"
-                    onClick={() => setDeleteTarget(i)}
-                    data-ocid={`dashboard.delete_button.${i + 1}`}
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </Button>
-                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Try a different title or name.
+                </p>
               </motion.div>
-            ))}
+            ) : (
+              filteredResumes.map(({ resume, originalIdx }, i) => (
+                <motion.div
+                  key={
+                    resume.title +
+                    resume.personalInfo.name +
+                    String(originalIdx)
+                  }
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.25, delay: i * 0.05 }}
+                  className="group bg-card border border-border rounded-xl p-5 shadow-card hover:shadow-elevated transition-shadow"
+                  data-ocid={`dashboard.item.${i + 1}`}
+                >
+                  {/* Card Header */}
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="w-10 h-10 rounded-lg bg-green-soft flex items-center justify-center shrink-0">
+                      <LayoutTemplate className="w-5 h-5 text-primary" />
+                    </div>
+                    <Badge
+                      className={`text-xs font-semibold border-0 ${templateColors[resume.template]}`}
+                    >
+                      {templateLabels[resume.template]}
+                    </Badge>
+                  </div>
+
+                  {/* Title & Info */}
+                  <h3 className="font-display font-bold text-base mb-1 truncate">
+                    {resume.title || "Untitled Resume"}
+                  </h3>
+                  <p className="text-xs text-muted-foreground truncate mb-1">
+                    {resume.personalInfo.name || "—"}
+                  </p>
+                  {resume.personalInfo.email && (
+                    <p className="text-xs text-muted-foreground truncate">
+                      {resume.personalInfo.email}
+                    </p>
+                  )}
+
+                  <div className="mt-2 mb-4 text-xs text-muted-foreground">
+                    {resume.workExperience.length} job
+                    {resume.workExperience.length !== 1 ? "s" : ""} ·{" "}
+                    {resume.skills.length} skill
+                    {resume.skills.length !== 1 ? "s" : ""}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 text-xs"
+                      onClick={() => onEdit(originalIdx)}
+                      data-ocid={`dashboard.edit_button.${i + 1}`}
+                    >
+                      <Edit3 className="w-3.5 h-3.5 mr-1.5" />
+                      Edit
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs text-muted-foreground hover:text-foreground border-border"
+                      onClick={() => handleDuplicate(originalIdx)}
+                      disabled={duplicatingIdx === originalIdx}
+                      title="Duplicate resume"
+                      data-ocid={`dashboard.secondary_button.${i + 1}`}
+                    >
+                      {duplicatingIdx === originalIdx ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Copy className="w-3.5 h-3.5" />
+                      )}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs text-destructive hover:text-destructive hover:bg-destructive/5 border-border"
+                      onClick={() => setDeleteTarget(originalIdx)}
+                      data-ocid={`dashboard.delete_button.${i + 1}`}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                </motion.div>
+              ))
+            )}
           </AnimatePresence>
         </motion.div>
       )}
